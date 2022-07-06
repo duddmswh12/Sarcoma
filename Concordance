@@ -1,0 +1,230 @@
+rm(list=ls())
+setwd("F:/Concordance Plot")
+
+
+library(readxl)
+library(dplyr)
+
+##CellTumor common 찾기
+rm(list=ls())
+
+dir <- ("F:/Concordance Plot/ExomeFile/")
+TC_name <- c("5373","6217A","6218A","6219A","6219B","6219E",
+             "6246C","6246D","6349A","6380B","6766")
+a = 1
+
+TC_List <- list(NULL)
+
+
+for (i in 1:length(TC_name)) {
+  
+  Tissue <- paste(dir,TC_name[i],"_Tissue_MH.xlsx", sep = "")
+  Cell <- paste(dir,TC_name[i],"_CellLine_MH.xlsx", sep = "")
+  
+  TC_List[a] <- list(read_excel(Tissue))
+  TC_List[a+1] <- list(read_excel(Cell))
+  
+  a = a+2
+  
+}
+
+####################################################################
+
+COMMONLIST <- list(NULL)
+a = 1
+
+for (i in 1:length(TC_List)) {
+  
+  if(i%%2 == 1) {
+    TissueMH <- data.frame(TC_List[[i]]$POS,TC_List[[i]]$ALT)
+    CellLineMH <-data.frame(TC_List[[i+1]]$POS,TC_List[[i+1]]$ALT)
+    
+    names(TissueMH) <- c("POS","ALT")
+    names(CellLineMH) <- c("POS","ALT")
+    
+    inter <- intersect(TissueMH,CellLineMH)
+    inter$Merge <- paste(inter$POS, inter$ALT, sep = "/")
+    TC_List[[i]]$Merge <- paste(TC_List[[i]]$POS,TC_List[[i]]$ALT, sep = "/")
+    
+    common <- TC_List[[i]] %>% filter(Merge %in% inter$Merge)
+    
+    COMMONLIST[a] <-list(common)
+    
+    a = a+1
+    
+  } else {
+    next
+  }
+  
+  
+}
+
+for (i in 1:length(COMMONLIST)) {
+  write.table(COMMONLIST[i], file = paste0(TC_name[i],"_CellTissue_common_MH.txt"), sep = "\t", row.names = F)
+  
+}
+
+##Only Cell
+rm(list=ls())
+
+dir <- ("F:/Concordance Plot/ExomeFile/")
+
+TC_name <- c("5373","6217A","6218A","6219A","6219B","6219E",
+             "6246C","6246D","6349A","6380B","6766")
+
+CellList <- list(NULL)
+CommonList <- list(NULL)
+
+for (i in 1:length(TC_name)) {
+  
+  common <- paste(dir,TC_name[i],"_CellTissue_common_MH.txt", sep = "")
+  Cell <- paste(dir,TC_name[i],"_CellLine_MH.xlsx", sep = "")
+  
+  CommonList[i] <- list(read.table(common, header = T))
+  CellList[i] <- list(data.frame(read_excel(Cell)))
+  
+  
+}
+
+
+#################################################################
+
+OnlyCellList <- list(NULL)
+
+for (i in 1:11) {
+  
+  CommonMH <- data.frame(CommonList[[i]]$POS,CommonList[[i]]$ALT)
+  CellLineMH <-data.frame(CellList[[i]]$POS,CellList[[i]]$ALT)
+  
+  names(CommonMH) <- c("POS","ALT")
+  names(CellLineMH) <- c("POS","ALT")
+  
+  dif <- setdiff(CellLineMH,CommonMH)
+  dif$Merge <- paste(dif$POS, dif$ALT, sep = "/")
+  
+  CellList[[i]]$Merge <- paste(CellList[[i]]$POS,CellList[[i]]$ALT, sep = "/")
+  
+  Only <- CellList[[i]] %>% filter(Merge %in% dif$Merge)
+  
+  OnlyCellList[i] <- list(Only)
+  
+}
+
+
+#####################################################
+
+
+dir <- ("F:/Concordance Plot/ExomeFile/")
+
+TC_name <- c("5373","6217A","6218A","6219A","6219B","6219E",
+             "6246C","6246D","6349A","6380B","6766")
+
+TissueList <- list(NULL)
+CommonList <- list(NULL)
+
+for (i in 1:length(TC_name)) {
+  
+  common <- paste(dir,TC_name[i],"_CellTissue_common_MH.txt", sep = "")
+  Tissue <- paste(dir,TC_name[i],"_Tissue_MH.xlsx", sep = "")
+  
+  CommonList[i] <- list(read.table(common, header = T))
+  TissueList[i] <- list(data.frame(read_excel(Tissue)))
+  
+  
+}
+
+
+##############################################
+
+OnlyTissueList <- list(NULL)
+
+for (i in 1:11) {
+  
+  CommonMH <- data.frame(CommonList[[i]]$POS,CommonList[[i]]$ALT)
+  TissueMH <-data.frame(TissueList[[i]]$POS,TissueList[[i]]$ALT)
+  
+  names(CommonMH) <- c("POS","ALT")
+  names(TissueMH) <- c("POS","ALT")
+  
+  dif <- setdiff(TissueMH,CommonMH)
+  dif$Merge <- paste(dif$POS, dif$ALT, sep = "/")
+  
+  TissueList[[i]]$Merge <- paste(TissueList[[i]]$POS,TissueList[[i]]$ALT, sep = "/")
+  
+  Only <- TissueList[[i]] %>% filter(Merge %in% dif$Merge)
+  
+  OnlyTissueList[i] <- list(Only)
+  
+}
+
+
+##count
+
+TC_name <- c("5373","6217A","6218A","6219A","6219B","6219E",
+             "6246C","6246D","6349A","6380B","6766")
+
+Concordance_count <- data.frame(Patient = NULL, Total = NULL, Only_Cell = NULL, Only_Tissue = NULL, Common_CellTissue = NULL)
+
+for (i in 1:11) {
+  Patient <- paste("SNU-",TC_name[i],sep = "")
+  Total <- nrow(CommonList[[i]])+nrow(OnlyCellList[[i]])+
+    nrow(OnlyTissueList[[i]])
+  Only_Cell <- nrow(OnlyCellList[[i]])
+  Only_Tissue <- nrow(OnlyTissueList[[i]])
+  Common_CellTissue <- nrow(CommonList[[i]])
+  
+  df <- data.frame(Patient, Total, Only_Cell, Only_Tissue, Common_CellTissue)
+  
+  Concordance_count <- rbind(Concordance_count,df)
+  
+}
+
+#####################################################################################
+
+
+C_rate <- NULL
+
+C_list <- c("5373","6217A","6218A","6219A","6219B","6219E","6246C","6246D","6349A",
+            "6380B","6766")
+
+for (i in 1:11) {
+  SNU <- paste0("SNU-", C_list[i])
+  Patient <- c(SNU,SNU,SNU)
+  N <- c(Concordance_count$Common_CellTissue[i], 
+         Concordance_count$Only_Tissue[i], Concordance_count$Only_Cell[i])
+  Mutations <- c("Tissue & Cell line Mutations","Tissue only Mutations",
+                 "Cell line only Mutations")
+  Concordance_rate <- N/(Concordance_count$Common_CellTissue[i]+
+                           Concordance_count$Only_Tissue[i]+
+                           Concordance_count$Only_Cell[i])
+  df <- assign(paste0("df_",i),
+               data.frame(Patient, N, Mutations,Concordance_rate))
+}
+
+
+
+C_rate <- rbind(df_11,df_10,df_9,df_8,df_7,df_6,df_5,df_4,df_3,df_2,df_1)
+
+write.table(C_rate, sep="\t", file = "Concordance_rate_220331.txt",
+            row.names=TRUE,col.names=NA,quote=FALSE)
+
+
+
+##Plot
+
+
+library(scales)
+
+C_rate <- read.delim("Concordance_rate_220331.txt", row.names = 1)
+
+C_rate$Mutations <- factor(C_rate$Mutations, levels = c("Cell line only Mutations",
+                                                        "Tissue only Mutations",
+                                                        "Tissue & Cell line Mutations"))
+
+library(ggplot2)
+ggplot(data = C_rate, aes(x=Patient,y=Concordance_rate, fill=Mutations)) + geom_col() +
+  coord_flip() + scale_fill_manual(values = c("#CC0000", "#003366","#666666")) +
+  theme(text = element_text(size = 20)) + xlab("")
+
+dev.copy(tiff,"Sarcoma_Concordance rate_220415.tiff",width=10, height=8, units="in",res=200) 
+dev.off()
