@@ -1,0 +1,22 @@
+rm(list=ls())
+
+setwd("F:/Cluster_PCA")
+
+library("FactoMineR")
+library("factoextra")
+
+just.raw.counts = read.delim("CellLine_TPM_withoutMIR,LOC.txt", row.names = 1)
+just.raw.counts_t <- t(just.raw.counts)
+res.pca <- PCA(just.raw.counts_t, graph = FALSE)
+ind <- get_pca_ind(res.pca)
+
+set.seed(123)
+res.km <- kmeans(ind$coord, centers = 2, nstart = 25)
+grp <- as.factor(res.km$cluster)
+# Color variables by groups
+fviz_pca_ind(res.pca, col.ind = grp, 
+             palette = c("#0073C2FF", "#EFC000FF", "#868686FF","red"),
+             legend.title = "Cluster")
+
+dev.copy(tiff,"PCA_TPM_notNorm_except6179B,6246c,D_withoutMIR,LOC.tiff",width=10, height=10, units="in",res=200) 
+dev.off() 
