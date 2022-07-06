@@ -5,7 +5,7 @@ setwd("F:/Concordance Plot")
 library(readxl)
 library(dplyr)
 
-##CellTumor common 찾기
+###########################################################################
 rm(list=ls())
 
 dir <- ("F:/Concordance Plot/ExomeFile/")
