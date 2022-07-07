@@ -20,3 +20,77 @@ sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rs
 
 sudo docker pull eagenomics/cnvradar:v1.2.1; 
 sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/CNV_Radar.r -c cnvradar_normal_cohort.RData -r KCLB20MES1591.recal_roiSummary.txt -v KCLB20MES1591.final.vcf.gz --useAllVars
+
+#####Heatmap
+
+library(readxl)
+library(BiocManager)
+library(circlize)
+library(colorspace)
+library(GetoptLong)
+library(ComplexHeatmap)
+setwd("E:/NGS")
+rm(list=ls())
+raw <- data.frame(read_excel("CNV_plot_Total_value_CellLine.xlsx"))
+row.names(raw)<-raw$Region
+raw<-raw[,2:19]
+raw<-data.matrix(raw)
+
+mycolors <- colorRamp2(c(-1, 0 , 2), c("blue", "#EEEEEE", "red"))
+
+
+label = c("SNU-5373","SNU-6035","SNU-6036","SNU-6179B","SNU-6217A","SNU-6218A",
+          "SNU-6219A","SNU-6219B","SNU-6219E","SNU-6246C","SNU-6246D","SNU-6349A",
+          "SNU-6362","SNU-6380B","SNU-6766","SNU-6837","SNU-6938","SNU-6962")
+
+sample_order = scan("E:/NGS/Order_CellLine.txt", what = "character", fill = F)
+
+is.na(sample_order)
+
+
+subcha <- scan("E:/NGS/subtype.txt", what = "character", fill = F)
+col_subype = c("Myxofibrosarcoma" = "#3F51B5",
+               "UndifferentiatedPleomorphicSarcoma" = "#FFEB3B",
+               "SynovialSarcoma" = "#FF8F00","Chondrosarcoma" = "#4CAF50",
+               "DesmoplasticSmallRoundCellTumor" = "#F44336",
+               "PleomorphicLiposarcoma" = "#00BCD4",
+               "Osteosarcoma" = "#9C27B0", "Fibrosarcoma" = "#AED581")
+
+subtype <- HeatmapAnnotation(Subtype = subcha, col = list(Subtype = col_subype),
+                             annotation_legend_param = 
+                               list(at = c("Myxofibrosarcoma",
+                                           "UndifferentiatedPleomorphicSarcoma",
+                                           "SynovialSarcoma","Chondrosarcoma",
+                                           "DesmoplasticSmallRoundCellTumor",
+                                           "PleomorphicLiposarcoma",
+                                           "Osteosarcoma", "Fibrosarcoma"), labels = c(
+                                             "Myxofibrosarcoma",
+                                             "Undifferentiated Pleomorphic Sarcoma",
+                                             "Synovial Sarcoma", "Chondrosarcoma",
+                                             "Desmoplastic Small Round Cell Tumor",
+                                             "Pleomorphic Liposarcoma",
+                                             "Osteosarcoma","Fibrosarcoma"), nrow = 4,
+                                    title_gp=gpar(fontsize=15, fontface="bold"), 
+                                    labels_gp=gpar(fontsize=15)),
+                             show_annotation_name = F)
+
+
+
+CNV <- ComplexHeatmap::Heatmap(raw, name="CNV score", row_title = "",
+                        cluster_rows = F,cluster_columns = F,col = mycolors,
+                        rect_gp = gpar(col = "white", lwd = 1),
+                        row_names_side = "left", column_labels = label,
+                        column_names_gp = gpar(fontsize = 15),
+                        row_names_gp = gpar(fontsize = 15),
+                        bottom_annotation = subtype,
+                        heatmap_legend_param = 
+                          list(title_gp=gpar(fontsize=15, fontface="bold"), 
+                               labels_gp=gpar(fontsize=13),
+                               legend_height = unit(5, "cm")),
+                        column_order = sample_order)
+
+
+draw(CNV ,annotation_legend_side= "bottom")
+
+dev.copy(tiff,"CNV_heatmap_subtype.tiff",width=9,height=14,units="in",res=200)
+dev.off()
