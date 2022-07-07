@@ -1,0 +1,22 @@
+#####ROI create
+
+sudo docker pull eagenomics/cnvradar:v1.2.1; 
+sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/bam2roi.r -b KCLB20MES1575.recal.bam -d SureSelect_v6.bed -z >> bam2roi.log 2>&1
+
+sudo docker pull eagenomics/cnvradar:v1.2.1; 
+sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/bam2roi.r -b KCLB20MES1591.recal.bam -d SureSelect_v6.bed -z >> bam2roi.log 2>&1
+
+
+#####Control set create
+
+sudo docker pull eagenomics/cnvradar:v1.2.1
+sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/CreateROI_dendrograms.r -i ./ -o Normal_hcluster -r .roiSummary.txt
+
+sudo docker pull eagenomics/cnvradar:v1.2.1
+sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/CNV_Radar_create_control.r --directory /data -r .roiSummary.txt >> create_normal_cohort.log 2>&1
+
+
+#####Run CNVRadar
+
+sudo docker pull eagenomics/cnvradar:v1.2.1; 
+sudo docker run --rm -v "${PWD}:/data" -w /data -t eagenomics/cnvradar:v1.2.1 Rscript /opt/CNVRadar/CNV_Radar.r -c cnvradar_normal_cohort.RData -r KCLB20MES1591.recal_roiSummary.txt -v KCLB20MES1591.final.vcf.gz --useAllVars
