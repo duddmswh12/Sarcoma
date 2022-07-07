@@ -1,0 +1,114 @@
+rm(list=ls())
+
+library(GSVA)
+library(GSEABase)
+library(GSVAdata)
+
+setwd("F:/GSVA")
+
+##Gene set definition##
+#canonical pathways
+data(c2BroadSets)
+class(c2BroadSets)
+canonicalC2BroadSets <- c2BroadSets[c(grep("^KEGG", names(c2BroadSets)),
+                                      grep("^REACTOME", names(c2BroadSets)),
+                                      grep("^BIOCARTA", names(c2BroadSets)))]
+canonicalC2BroadSets
+#genes with sex-specific expression
+data(genderGenesEntrez)
+
+MSY <- GeneSet(msYgenesEntrez, geneIdType=EntrezIdentifier(),
+               collectionType=BroadCollection(category="c2"), setName="MSY")
+MSY
+XiE <- GeneSet(XiEgenesEntrez, geneIdType=EntrezIdentifier(),
+               collectionType=BroadCollection(category="c2"), setName="XiE")
+XiE
+canonicalC2BroadSets <- GeneSetCollection(c(canonicalC2BroadSets, MSY, XiE))
+canonicalC2BroadSets
+
+##Input##
+X <- read.table("CellLine_TPM.txt", header = T, sep = "\t")
+row.names(X) <- X$Gene_ID
+X <- X[,2:ncol(X)]
+X <- as.matrix(X)
+X_gsva <- gsva(X, canonicalC2BroadSets, min.sz=5, max.sz=500,
+               kcdf="Poisson")
+write.table(X_gsva, file = "gsva_TPM.txt",sep = "\t")
+
+####Differentially enriched pathway calculate
+
+
+X = read.delim("gsva_TPM_filterByCancerRelated.txt", row.names = 1)
+
+
+subtype <- read.delim("subtype_byPCA_TPM.txt", row.names = 1)
+subtype <- as.matrix(subtype)
+
+
+fit <- lmFit(X, subtype)
+fit <- eBayes(fit)
+res <- decideTests(fit, p.value=0.01)
+summary(res)
+
+tt <- topTable(fit, coef=2, n=Inf)
+DEpwys <- rownames(tt)[tt$adj.P.Val <= 0.01]
+
+SNU5373 <- data.frame(X$SNU5373[match(DEpwys, rownames(X))])
+SNU6035 <- data.frame(X$SNU6035[match(DEpwys, rownames(X))])
+SNU6036 <- data.frame(X$SNU6036[match(DEpwys, rownames(X))])
+SNU6179B <- data.frame(X$SNU6179B[match(DEpwys, rownames(X))])
+SNU6217A <- data.frame(X$SNU6217A[match(DEpwys, rownames(X))])
+SNU6218A <- data.frame(X$SNU6218A[match(DEpwys, rownames(X))])
+SNU6219A <- data.frame(X$SNU6219A[match(DEpwys, rownames(X))])
+SNU6219B <- data.frame(X$SNU6219B[match(DEpwys, rownames(X))])
+SNU6219E <- data.frame(X$SNU6219E[match(DEpwys, rownames(X))])
+SNU6246C <- data.frame(X$SNU6246C[match(DEpwys, rownames(X))])
+SNU6246D <- data.frame(X$SNU6246D[match(DEpwys, rownames(X))])
+SNU6349A <- data.frame(X$SNU6349A[match(DEpwys, rownames(X))])
+SNU6362 <- data.frame(X$SNU6362[match(DEpwys, rownames(X))])
+SNU6380B <- data.frame(X$SNU6380B[match(DEpwys, rownames(X))])
+SNU6766 <- data.frame(X$SNU6766[match(DEpwys, rownames(X))])
+SNU6837 <- data.frame(X$SNU6837[match(DEpwys, rownames(X))])
+SNU6938 <- data.frame(X$SNU6938[match(DEpwys, rownames(X))])
+SNU6962 <- data.frame(X$SNU6962[match(DEpwys, rownames(X))])
+
+
+DEpwys_es <- cbind(SNU5373,SNU6035,SNU6036,SNU6179B,SNU6217A,SNU6218A,SNU6219A,SNU6219B,SNU6219E,SNU6246C,SNU6246D,SNU6349A,SNU6362,SNU6380B,SNU6766,SNU6837,SNU6938,SNU6962)
+
+
+colnames(DEpwys_es) <- c("SNU5373","SNU6035","SNU6036","SNU6179B","SNU6217A","SNU6218A","SNU6219A","SNU6219B","SNU6219E","SNU6246C","SNU6246D","SNU6349A","SNU6362","SNU6380B","SNU6766","SNU6837","SNU6938","SNU6962")
+rownames(DEpwys_es) <- DEpwys
+
+DEpwys_es <- as.matrix(DEpwys_es)
+
+
+colnames(DEpwys_es) <- c("SNU-5373","SNU-6035","SNU-6036","SNU-6179B","SNU-6217A",
+                         "SNU-6218A","SNU-6219A","SNU-6219B","SNU-6219E","SNU-6246C",
+                         "SNU-6246D","SNU-6349A","SNU-6362","SNU-6380B","SNU-6766",
+                         "SNU-6837","SNU-6938","SNU-6962")
+
+
+cluster <- scan("F:/GSVA/Cluster_by_PCA.txt", what = "character", fill = F)
+col_cluster = c("type1" = "#1565C0", "type2" = "yellow")
+subtype <- HeatmapAnnotation(Cluster = cluster, col = list(Cluster = col_cluster),
+                             annotation_legend_param = 
+                               list(at = c("type1","type2"), 
+                                    labels = c("Cluster 1", "Cluster 2"),
+                                    legend_direction = "horizontal",
+                                    title_gp = gpar(fontsize = 20),
+                                    labels_gp = gpar(fontsize = 20)),
+                             show_annotation_name = F)
+
+ht <- ComplexHeatmap::Heatmap(DEpwys_es, name="Enrichment Score", cluster_columns = T,
+                        row_labels = c("","","",""), show_column_dend = F, 
+                        bottom_annotation = subtype, heatmap_legend_param = 
+                        list(legend_direction = "horizontal", 
+                             title_gp = gpar(fontsize = 20),
+                             labels_gp = gpar(fontsize = 20)),
+                        column_names_gp = gpar(fontsize = 20))
+
+
+draw(ht, merge_legend = T, annotation_legend_side= "top", heatmap_legend_side = "top")
+
+dev.copy(tiff,"GSVA_clusterbyTPMPCA_CancerRelated.tiff",width=15, height=8, units="in",res=200) 
+dev.off() 
