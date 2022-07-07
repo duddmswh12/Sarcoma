@@ -1,0 +1,72 @@
+rm(list=ls())
+
+library(GSVA)
+library(GSEABase)
+library(GSVAdata)
+
+setwd("F:/6219set_5373set")
+
+##Gene set definition##
+#canonical pathways
+data(c2BroadSets)
+class(c2BroadSets)
+canonicalC2BroadSets <- c2BroadSets[c(grep("^KEGG", names(c2BroadSets)),
+                                      grep("^REACTOME", names(c2BroadSets)),
+                                      grep("^BIOCARTA", names(c2BroadSets)))]
+canonicalC2BroadSets
+#genes with sex-specific expression
+data(genderGenesEntrez)
+
+MSY <- GeneSet(msYgenesEntrez, geneIdType=EntrezIdentifier(),
+               collectionType=BroadCollection(category="c2"), setName="MSY")
+MSY
+XiE <- GeneSet(XiEgenesEntrez, geneIdType=EntrezIdentifier(),
+               collectionType=BroadCollection(category="c2"), setName="XiE")
+XiE
+canonicalC2BroadSets <- GeneSetCollection(c(canonicalC2BroadSets, MSY, XiE))
+canonicalC2BroadSets
+
+##Input##
+X <- read.table("TPM_5373set_log2_SDfilter_upon1.0_GeneID.txt", header = T, sep = "\t")
+row.names(X) <- X$Gene_ID
+X <- X[,2:ncol(X)]
+X <- as.matrix(X)
+
+X = read.delim("CellLine_TPM_5373,6217,6219.txt", row.names = 1)
+X <- as.matrix(X)
+
+X_gsva <- gsva(X, canonicalC2BroadSets, min.sz=5, max.sz=500,
+               kcdf="Poisson")
+write.table(X_gsva, file = "GSVA_TPM_5373,6217_SDfilter_upon1.0.txt",sep = "\t")
+
+#################Visualization
+
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(tidyverse)
+
+df <- read.table("GSVA_TPM_5373,6217_SDfilter_upon1.0_CancerRelatedPW.txt", header = T)
+colnames(df) <- c("PW","SNU-5373","SNU-6217A")
+var_names <- df[,1]
+SNU5373 <- df[,2]
+SNU6217A <- df[,3]
+
+test <- data.frame(var_names, SNU5373, SNU6217A, stringsAsFactors = FALSE)
+colnames(test) <- c("var_names","SNU-5373","SNU-6217A")
+
+input <- gather(test, key = "Sample", value = "EnrichmentScore", c(2:3)) %>%
+  mutate(var_names = factor(var_names, levels = unique(var_names)))
+
+###Barplot
+
+ggplot(input, aes(x=var_names, y=EnrichmentScore, color = Sample, group= Sample, 
+                  fill = Sample)) + 
+  geom_bar(stat='identity', position = position_dodge(), width = 0.7)+theme_minimal()+
+  theme(axis.text.x = element_blank())+ 
+  xlab("") +ylab("Enrichment Score") + theme(text = element_text(size = 15))
+
+###Save
+
+dev.copy(tiff,"5373set_GSVA_SDfilter_upon1.0_CancerRelatedPW_220602.tiff",width=12, height=4, units="in",res=200) 
+dev.off()
