@@ -1,0 +1,65 @@
+rm(list=ls())
+setwd("F:/6219set_5373set")
+
+library(fpc)
+library(factoextra)
+library(dbscan)
+
+data <- read.delim("relapse_vaf_comparison_overlapTissue_DeepSeq_namecombine.txt", row.names = 1)
+df <- data[, 1:2]
+
+##optimal cluster number
+
+dbscan::kNNdistplot(df, k =  4)
+abline(h = 0.06, lty = 2)
+
+##DBSCAN
+
+set.seed(123)
+db <- fpc::dbscan(df, eps = 0.06, MinPts = 4)
+fviz_cluster(db, df, stand = FALSE, frame = FALSE, geom = "point")
+
+############
+
+data$cluster <- paste("C", db$cluster, sep = "_")
+write.table(data,"relapse_vaf_comparison_overlapTissue_DeepSeq_namecombine_cluster.txt", row.names = T, col.names = T, append = F, quote = F, sep = "\t")
+
+#############
+
+library(dplyr)
+library(ggplot2)
+
+data1 <- read.delim("relapse_vaf_comparison_overlapTissue_DeepSeq_namecombine_cluster.txt", row.names = 1)
+
+######plot
+
+mycluster <- c("c_1","c_2","C_3","C_4","C_5","C_6","C_7")
+
+
+mycolors <- c(adjustcolor("#9E9E9E", alpha=0.6), adjustcolor("darkblue", alpha=0.6),adjustcolor("darkgreen", alpha=0.3), adjustcolor("darkgreen", alpha=0.8),
+              adjustcolor("#F57F17", alpha=0.8),adjustcolor("#880E4F", alpha=0.6), "white")
+
+
+
+
+ggplot(data1, aes(x=Primary_VAF, y=Relapse_VAF, color = col)) + 
+  geom_point(aes(fill = Cluster, shape = Impact), size = 3.5, stroke = 0.8)+
+  theme_classic() +
+  annotate("segment", x = 0, xend = 1.02, y = 0, yend = 0, colour = "gray", size=0.7) +
+  annotate("segment", x = 0, xend = 0, y = 0, yend = 1.02, colour = "gray", size=0.7) +
+  annotate("segment", x = 1.02, xend = 1.02, y = 0, yend = 1.02, colour = "gray", size=0.7) +
+  annotate("segment", x = 0, xend = 1.02, y = 1.02, yend = 1.02, colour = "gray", size=0.7) + scale_fill_manual(values = mycolors) +
+  scale_color_manual(values = c("black","#9E9E9E"), guide = "none") +
+  scale_shape_manual(values = c(24,21)) +
+  geom_text(aes(y=Relapse_VAF +.033, label = label),color = "black" , fontface = "bold", size = 4.5) + theme(legend.position = "top", legend.direction = "horizontal",
+                    axis.text = element_text(size = 15), 
+                    axis.title = element_text(size = 15),
+                    legend.title = element_text(face = "bold", size = 15)
+                    ) +
+  guides(fill = guide_legend(override.aes = list(size = 4)), 
+         shape = guide_legend(override.aes = list(size = 4)))
+
+
+
+dev.copy(tiff,"Relapse_vaf_comparison_overlapTissue_cluster_220601.tiff",width=11, height=8, units="in",res=200) 
+dev.off() 
