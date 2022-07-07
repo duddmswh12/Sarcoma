@@ -1,0 +1,63 @@
+###Oncoscore
+
+rm(list=ls())
+setwd("F:/6219set_5373set")
+
+library("OncoScore")
+
+SD_file <- read.delim("TPM_6219set_Normalization_log2_SDTop100.txt", row.names = 1)
+
+list_gene <- rownames(SD_file)
+
+query = perform.query(list_gene)
+
+result = compute.oncoscore(query)
+
+write.table(result, sep="\t",file="TPM_6219set_Normalization_log2_SDfilter_Top100_OncoScore.txt", row.names=TRUE,col.names=T,quote=FALSE)
+
+####DEG visualization
+
+library(ggplot2)
+library(gridExtra)
+
+df <- read.table("TPM_6219set_Normalization_log2_SDfilter_Top100_OncoScore_up30.txt", header = T)
+gene <- as.data.frame(df[,1])
+df1 <- as.data.frame(df[,1:2])
+df2 <- as.data.frame(df[,3])
+df3 <- as.data.frame(df[,4])
+
+df2 <- cbind(gene,df2)
+df3 <- cbind(gene,df3)
+
+colnames(df1) <- c("Gene_Symbol", "Log2FC")
+colnames(df2) <- c("Gene_Symbol", "Log2FC")
+colnames(df3) <- c("Gene_Symbol", "Log2FC")
+
+Order <- df3[,1]
+
+g1 <- ggplot(df1, aes(Gene_Symbol, Log2FC))+ scale_x_discrete(limits = Order)+
+  geom_bar(stat='identity', position = 'dodge', fill = "#C62828")+coord_flip()+
+  theme_minimal() +ylab("Log2FC") + xlab("Gene")+theme_classic()+ 
+  ggtitle("SNU-6219A") +
+  theme(axis.text.y = element_blank(), text = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5), axis.title = element_text(size = 15))
+
+g2 <- ggplot(df2, aes(Gene_Symbol, Log2FC))+ scale_x_discrete(limits = Order)+
+  geom_bar(stat='identity', position = 'dodge', fill = "#1A237E")+coord_flip()+
+  theme_minimal() +ylab("") + xlab("")+theme_classic() +
+  ggtitle("SNU-6219B") +
+  theme(axis.text.y = element_blank(), text = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5), axis.title = element_text(size = 15))
+
+g3 <- ggplot(df3, aes(Gene_Symbol, Log2FC))+ scale_x_discrete(limits = Order)+
+  geom_bar(stat='identity', position = 'dodge', fill = "#004D40")+coord_flip()+
+  theme_minimal() +ylab("") + xlab("")+theme_classic()+
+  ggtitle("SNU-6219E") +
+  theme(axis.text.y = element_blank(), text = element_text(size = 20),
+        plot.title = element_text(hjust = 0.5), axis.title = element_text(size = 15))
+
+grid.arrange(g1,g2,g3, ncol = 3)
+
+
+dev.copy(tiff,"6219set_Scoring_log2TPM_Top100_barplot_OrderBy6219B_horizontal_fontsize_220601_label.tiff",width=15, height=5, units="in",res=200) 
+dev.off()
