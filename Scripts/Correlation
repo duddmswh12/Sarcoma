@@ -1,0 +1,87 @@
+library(readxl)
+library(dplyr)
+setwd("F:/Correlation")
+
+####################
+
+rm(list=ls())
+directory <- c("F:/Correlation/")
+AUC_file <- data.frame(read_excel(paste(directory,"Gene-Drug association_AUC_including_NotNormal.xlsx",sep = "")))
+AUC_file[is.na(AUC_file)] = ""
+AUC_file = as.data.frame(AUC_file)
+row.names(AUC_file) <- AUC_file$Name
+AUC_file<-AUC_file[,2:ncol(AUC_file)]
+
+CNV_exp_file <- data.frame(read_excel(paste(directory,"CNV_Input.xlsx",sep = ""))) 
+CNV_exp_file[is.na(CNV_exp_file)] = ""
+row.names(CNV_exp_file) <- CNV_exp_file$Region
+CNV_exp_file<-CNV_exp_file[,2:ncol(CNV_exp_file)]
+CNV_exp_file <- t(CNV_exp_file)
+CNV_exp_file <- as.data.frame(CNV_exp_file)
+
+####################
+
+Drug_list <- colnames(AUC_file)
+
+Gene_list <- colnames(CNV_exp_file)
+
+AUC_RNAexp <- list(NULL)
+
+a = 1
+
+for (i in 1:ncol(AUC_file)) {
+  now <- AUC_file%>%select(Drug_list[i])
+  
+  
+  
+  for (j in 1:ncol(TPM_exp_file)) {
+    MUT_now <- TPM_exp_file%>%select(Gene_list[j])
+    AUC_MUT_comb <- cbind(now, MUT_now)
+    
+    AUC_RNAexp[a] <- list(data.frame(AUC_MUT_comb))
+    a = a+1
+  }
+}
+
+####################
+
+Drug_RNAexp_Pvalue <- NULL
+
+
+for (i in 1:length(AUC_RNAexp)) {
+  
+  pearson <- cor.test(AUC_RNAexp[[i]][,1],AUC_RNAexp[[i]][,2], method = "spearman")
+  p_value <- c(pearson[[1]],pearson[[3]],pearson[[4]])
+  p_value <- data.frame(t(p_value))
+  df <- colnames(AUC_RNAexp[[i]])
+  Drug <- df[1]
+  Mut <- df[2]
+  df_1 <- data.frame(Drug, Mut, p_value)
+  
+  Drug_RNAexp_Pvalue <- rbind(Drug_RNAexp_Pvalue, df_1)  
+}
+
+####################
+
+write.table(Drug_RNAexp_Pvalue,"Correlation_CNV_Drug.txt", row.names = T, col.names = T, append = F, quote = F, sep = "\t")
+
+####################
+
+library(ggplot2)
+library(hrbrthemes)
+library(ggrepel)
+
+setwd("F:/Correlation/")
+
+rm(list=ls())
+
+data <- read.delim("11q24.2_Dox.txt", row.names = 1)
+
+
+ggplot(data, aes(x=Doxorubicin, y=X11q24.2)) + geom_point() + 
+  geom_smooth(method=lm , color="#000080", fill="#ADD8E6", se=TRUE) + theme_classic() +
+  annotate("text", x=1.7, y=0.7, label="r = -0.72, p = 0.0007", size=5) + 
+  xlab( "AUC of Doxorubicin") + ylab("CNV score of 11q24.2")
+
+dev.copy(tiff,"11q24.2_Dox_correlationPlot_220415.tiff",width=10, height=10, units="in",res=200) 
+dev.off() 
