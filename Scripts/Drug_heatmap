@@ -1,0 +1,25 @@
+library(BiocManager)
+library(circlize)
+library(colorspace)
+library(GetoptLong)
+library(ComplexHeatmap)
+
+setwd("F:/NGS/Heatmap_Sarcoma")
+rm(list=ls())
+raw <- read.table("AUC_total.txt",header=T, sep="\t" )
+row.names(raw)<-raw$Name
+raw<-raw[,2:19]
+colnames(raw) <- c("SNU-5373","SNU-6035","SNU-6036","SNU-6179B","SNU-6217A","SNU-6218A",
+                   "SNU-6219A","SNU-6219B","SNU-6219E","SNU-6246C","SNU-6246D",
+                   "SNU-6349A","SNU-6362","SNU-6380B","SNU-6766","SNU-6837",
+                   "SNU-6938","SNU-6962")
+raw<-data.matrix(raw)
+
+mycolors <- colorRamp2(c(0.3, 1 , 1.8), c("blue", "white", "red"))
+
+
+ComplexHeatmap::Heatmap(raw, name="AUC",cluster_rows = T,
+                        col = mycolors, column_km = 4)
+
+dev.copy(tiff,"Sarcoma_Heatmap_220602_K4_size.tiff",width=11,height=7,units="in",res=200)
+dev.off()
