@@ -1,0 +1,251 @@
+library(readxl)
+library(dplyr)
+setwd("F:/gene-drug association")
+
+
+###############
+
+rm(list=ls())
+directory <- c("F:/gene-drug association/")
+AUC_file <- data.frame(read_excel(paste(directory,"Gene-Drug association_AUC_including_NotNormal.xlsx",sep = "")))
+AUC_file[is.na(AUC_file)] = ""
+AUC_file = as.data.frame(AUC_file)
+row.names(AUC_file) <- AUC_file$Name
+AUC_file<-AUC_file[,2:7]
+
+CNV_file <- data.frame(read_excel(paste(directory,"Gene-Drug association_CNV_total_including_NotNormal.xlsx",sep = "")))
+CNV_file[is.na(CNV_file)] = ""
+row.names(CNV_file) <- CNV_file$Name
+CNV_file<-CNV_file[,2:33]
+
+###############
+
+Drug_list <- c("Doxorubicin","Ifosfamide","Gemcitabine","Dacarbazine","Docetaxel","Pazopanib")
+
+CNV_list <- colnames(CNV_file)
+AUC_CNV <- list(NULL)
+a = 1
+
+for (i in 1:ncol(AUC_file)) {
+  now <- AUC_file%>%select(Drug_list[i])
+  
+  
+  
+  for (j in 1:ncol(CNV_file)) {
+    CNV_now <- CNV_file%>%select(CNV_list[j])
+    AUC_CNV_comb <- cbind(now, CNV_now)
+    
+    AUC_CNV[a] <- list(data.frame(AUC_CNV_comb))
+    a = a+1
+  }
+}
+
+###############
+
+Drug_CNV_Pvalue <- NULL
+
+
+for (i in 1:length(AUC_CNV)) {
+  
+  wilvalue <- wilcox.test(AUC_CNV[[i]][,1]~AUC_CNV[[i]][,2])
+  p_value <- wilvalue[[3]]
+  smalldf <- data.frame(p_value)
+  df <- colnames(AUC_CNV[[i]])
+  Drug <- df[1]
+  CNV <- df[2]
+  df_1 <- data.frame(Drug, CNV, smalldf)
+  
+  Drug_CNV_Pvalue <- rbind(Drug_CNV_Pvalue, df_1)
+   
+}
+
+###############
+
+WT_df <- NULL
+CNV_df <- NULL
+WT_med <- NULL
+CNV_med <- NULL
+Drug_CNV_AUC_foldchange <- NULL
+
+for (i in 1:length(AUC_CNV)) {
+  now <- AUC_CNV[[i]]
+  WT_df <- NULL
+  CNV_df <- NULL 
+  for (j in 1:nrow(now)) {
+    now_2 <- now[j,]
+    
+    if (now[j,2] == "WT") {
+      WT_df <- rbind(WT_df,now_2)
+    } else {
+      CNV_df <- rbind(CNV_df, now_2)
+    }
+    
+  }
+  
+  WT_med <- median(WT_df[,1])
+  CNV_med <- median(CNV_df[,1])
+  
+  AUC <- CNV_med/WT_med
+  AUC <- data.frame(AUC)
+  CNV_cnt <- nrow(CNV_df)
+  df <- colnames(AUC_CNV[[i]])
+  Drug <- df[1]
+  CNV <- df[2]
+  df_1 <- data.frame(Drug, CNV, AUC, CNV_cnt)
+  
+  Drug_CNV_AUC_foldchange <- rbind(Drug_CNV_AUC_foldchange, df_1)
+  
+}
+
+
+###############
+
+test <- cbind(Drug_CNV_Pvalue, Drug_CNV_AUC_foldchange)
+write.table(test,"AUC_foldchange_Pvalue_CNV_total_cnt.txt", row.names = T, col.names = T, append = F, quote = F, sep = "\t")
+
+###############
+
+rm(list=ls())
+directory <- c("F:/gene-drug association/")
+AUC_file <- data.frame(read_excel(paste(directory,"Gene-Drug association_AUC.xlsx",sep = ""))) 
+AUC_file[is.na(AUC_file)] = ""
+AUC_file = as.data.frame(AUC_file)
+row.names(AUC_file) <- AUC_file$Name
+AUC_file<-AUC_file[,2:7]
+
+MUT_file <- data.frame(read_excel(paste(directory,"Gene-Drug association_MUT.xlsx",sep = ""))) 
+MUT_file[is.na(MUT_file)] = ""
+row.names(MUT_file) <- MUT_file$Name
+MUT_file<-MUT_file[,2:93]
+
+
+###############
+
+Drug_list <- c("Doxorubicin","Ifosfamide","Gemcitabine","Dacarbazine","Docetaxel","Pazopanib")
+
+MUT_list <- as.character(read.table("Mutation_list.txt"))
+AUC_MUT <- list(NULL)
+a = 1
+
+for (i in 1:ncol(AUC_file)) {
+  now <- AUC_file%>%select(Drug_list[i])
+  
+  
+  
+  for (j in 1:ncol(MUT_file)) {
+    MUT_now <- MUT_file%>%select(MUT_list[j])
+    AUC_MUT_comb <- cbind(now, MUT_now)
+    
+    AUC_MUT[a] <- list(data.frame(AUC_MUT_comb))
+    a = a+1
+  }
+}
+
+
+
+
+###############
+
+Drug_Mutation_Pvalue <- NULL
+
+
+for (i in 1:length(AUC_MUT)) {
+  
+  wilvalue <- wilcox.test(AUC_MUT[[i]][,1]~AUC_MUT[[i]][,2])
+  p_value <- wilvalue[[3]]
+  smalldf <- data.frame(p_value)
+  df <- colnames(AUC_MUT[[i]])
+  Drug <- df[1]
+  Mut <- df[2]
+  df_1 <- data.frame(Drug, Mut, smalldf)
+  
+  Drug_Mutation_Pvalue <- rbind(Drug_Mutation_Pvalue, df_1)
+  
+  
+  
+}
+
+
+###############
+
+WT_df <- NULL
+MUT_df <- NULL
+WT_med <- NULL
+MUT_med <- NULL
+Drug_Mutation_AUC_foldchange <- NULL
+
+for (i in 1:length(AUC_MUT)) {
+  now <- AUC_MUT[[i]]
+  WT_df <- NULL
+  MUT_df <- NULL  
+  for (j in 1:nrow(now)) {
+    now_2 <- now[j,]
+    
+    if (now[j,2] == "WT") {
+      WT_df <- rbind(WT_df,now_2)
+    } else {
+      MUT_df <- rbind(MUT_df, now_2)
+    }
+    
+  }
+  
+  WT_med <- median(WT_df[,1])
+  MUT_med <- median(MUT_df[,1])
+  
+  AUC <- MUT_med/WT_med
+  AUC <- data.frame(AUC)
+  MUT_cnt <- nrow(MUT_df)
+  df <- colnames(AUC_MUT[[i]])
+  Drug <- df[1]
+  Mut <- df[2]
+  df_1 <- data.frame(Drug, Mut, AUC, MUT_cnt)
+  
+  Drug_Mutation_AUC_foldchange <- rbind(Drug_Mutation_AUC_foldchange, df_1)
+  
+}
+
+
+###############
+
+test <- cbind(Drug_Mutation_Pvalue, Drug_Mutation_AUC_foldchange)
+write.table(test,"AUC_foldchange_Pvalue_MUTcnt.txt", row.names = T, col.names = T, append = F, quote = F, sep = "\t")
+
+###############Plot
+
+library(ggplot2)
+library(readxl)
+library(ggrepel)
+
+setwd("F:/gene-drug association")
+
+rm(list=ls())
+de <- read_excel("AUC_foldchange_Pvalue_Mut,CNVTotalcnt_Final.xlsx")
+
+
+de$diffexpressed <- "Not Significant"
+de$diffexpressed[log2(de$AUC) > 0.2 & de$p_value < 0.05] <- "Resistant"
+de$diffexpressed[log2(de$AUC) < -0.2 & de$p_value < 0.05] <- "Sensitive"
+
+de$delabel <- NA
+de$delabel[de$diffexpressed != "Not Significant"] <- 
+  paste(de$Mut[de$diffexpressed != "Not Significant"],
+        de$Drug[de$diffexpressed != "Not Significant"], sep = "\n")
+
+
+mycolors <- c(adjustcolor("red", alpha=0.4), adjustcolor("blue", alpha=0.4), adjustcolor("black", alpha=0.4))
+names(mycolors) <- c("Resistant", "Sensitive", "Not Significant")
+
+ggplot(data=de, aes(x=log2(AUC), y=-log10(p_value), label=delabel)) + 
+  geom_point(aes(fill = diffexpressed, size = cnt), shape=21)+  
+  theme_minimal() + coord_cartesian(xlim=c(-1,1), ylim=c(0,3)) + 
+  geom_vline(xintercept=c(-0.2, 0.2),lty = 5, col="black") + 
+  geom_hline(yintercept=-log10(0.05), lty = 5, col="black")+  
+  geom_text_repel(max.overlaps = 20, min.segment.length = 0, size = 5, box.padding = 1) +
+  theme(legend.title=element_blank()) + theme(text = element_text(size = 20)) +
+  scale_fill_manual(values = mycolors, aesthetics = "fill") + 
+  xlab("log2(fold-change AUC)") + ylab("-log10(P value)") + 
+  guides(size = F,fill = guide_legend(override.aes = list(size = 4)))
+
+
+dev.copy(tiff,"MUT,CNVtotal_Drug_minus_220601_size.tiff",width=11, height=11, units="in",res=200) 
+dev.off() 
